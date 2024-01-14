@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VoiceLinkChatBot", "VoiceLinkChatBot\VoiceLinkChatBot.csproj", "{C7B9E424-DEDD-4550-8D70-17836F4C28DC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C7B9E424-DEDD-4550-8D70-17836F4C28DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7B9E424-DEDD-4550-8D70-17836F4C28DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7B9E424-DEDD-4550-8D70-17836F4C28DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7B9E424-DEDD-4550-8D70-17836F4C28DC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

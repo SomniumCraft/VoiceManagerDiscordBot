@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>dotnet-VoiceLinkChatBot-E7C74F22-8D38-4A06-A62D-9D612708E1AC</UserSecretsId>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-01941" />
+        <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-01941" />
+        <PackageReference Include="DSharpPlus.SlashCommands" Version="5.0.0-nightly-01941" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+</Project>
