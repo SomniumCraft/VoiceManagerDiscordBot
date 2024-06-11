@@ -1,20 +1,14 @@
 using DSharpPlus;
+using DSharpPlus.Extensions;
 using VoiceLinkChatBot.Extensions;
 using VoiceLinkChatBot.Services;
 using VoiceLinkChatBot.Workers;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddTransient<LinkedChannelsService>();
-builder.Services.AddSingleton<DiscordClient>(
-    new DiscordClient(new DiscordConfiguration
-        {
-            Token = builder.Configuration["DiscordBotToken"],
-            TokenType = TokenType.Bot,
-            Intents = DiscordIntents.AllUnprivileged
-        }
-    )
-);
+builder.Services.AddDiscordClient(builder.Configuration["DiscordBotToken"], DiscordIntents.AllUnprivileged);
 builder.Services.AddHostedService<Worker>();
+builder.Services.AddEventHandlers();
 
 var host = builder.Build();
 host.AddDiscordCommands();

@@ -1,21 +1,25 @@
-using DSharpPlus;
+using System.ComponentModel;
+using DSharpPlus.Commands;
+using DSharpPlus.Commands.ContextChecks;
+using DSharpPlus.Commands.Processors.SlashCommands;
+using DSharpPlus.Commands.Trees.Metadata;
 using DSharpPlus.Entities;
-using DSharpPlus.SlashCommands;
-using DSharpPlus.SlashCommands.Attributes;
 using VoiceLinkChatBot.Services;
 
 namespace VoiceLinkChatBot.Commands;
 
-[SlashCommandGroup("channel", "Команды для управления связи текстового и голосового канала")]
-[SlashRequirePermissions(Permissions.ManageChannels | Permissions.ManageRoles)]
-public class ChannelLinkCommands(LinkedChannelsService service) : ApplicationCommandModule
+[Command("channel"), AllowedProcessors(typeof(SlashCommandProcessor))]
+[Description("Команды для управления связи текстового и голосового канала")]
+[RequirePermissions(DiscordPermissions.ManageChannels | DiscordPermissions.ManageRoles)]
+public class ChannelLinkCommands(LinkedChannelsService service)
 {
-    [SlashCommand("link", "Связывает текстовый канал с голосовым")]
-    public async Task Link(
-        InteractionContext context,
-        [Option("text_channel", "Текстовый канал, который вы хотите привязать")]
+    [Command("link")]
+    [Description("Связывает текстовый канал с голосовым")]
+    public async ValueTask Link(
+        CommandContext context,
+        [Description("Текстовый канал, который вы хотите привязать")]
         DiscordChannel textChannel,
-        [Option("voice_channel", "Голосовой канал, к которому будет выполнена привязка")]
+        [Description("Голосовой канал, к которому будет выполнена привязка")]
         DiscordChannel voiceChannel
     )
     {
@@ -23,16 +27,16 @@ public class ChannelLinkCommands(LinkedChannelsService service) : ApplicationCom
 
         await service.AddLinkAsync(context.Guild.Id, textChannel.Id, voiceChannel.Id);
 
-        await context.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-            new DiscordInteractionResponseBuilder().WithContent(
-                $"Ну типа привязал {textChannel.Name} к {voiceChannel.Name}"));
+        await context.RespondAsync($"Ну типа привязал {textChannel.Name} к {voiceChannel.Name}");
     }
 
-    [SlashCommand("unlink", "Отвязывает текстовый канал от голосового")]
-    public async Task Unlink(InteractionContext context,
-        [Option("text_channel", "Текстовый канал, который вы хотите отвязать")]
+    [Command("unlink")]
+    [Description("Отвязывает текстовый канал от голосового")]
+    public async Task Unlink(
+        CommandContext context,
+        [Description("Текстовый канал, который вы хотите отвязать")]
         DiscordChannel textChannel,
-        [Option("voice_channel", "Голосовой канал, от которго будет отвязан")]
+        [Description("Голосовой канал, от которго будет отвязан")]
         DiscordChannel voiceChannel
     )
     {
@@ -40,34 +44,24 @@ public class ChannelLinkCommands(LinkedChannelsService service) : ApplicationCom
 
         await service.RemoveLinkAsync(context.Guild.Id, textChannel.Id, voiceChannel.Id);
 
-        await context.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-            new DiscordInteractionResponseBuilder().WithContent(
-                $"Ну типа отвязал {textChannel.Name} от {voiceChannel.Name}"));
+        await context.RespondAsync($"Ну типа отвязал {textChannel.Name} от {voiceChannel.Name}");
     }
 
     private static async Task<bool> ValidateChannels(
-        BaseContext context,
+        CommandContext context,
         DiscordChannel textChannel,
         DiscordChannel voiceChannel
     )
     {
-        if (textChannel.Type != ChannelType.Text)
+        if (textChannel.Type != DiscordChannelType.Text)
         {
-            await context.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder().WithContent(
-                    "Указанный text_channel не является текстовым каналом"
-                )
-            );
+            await context.RespondAsync("Указанный textChannel не является текстовым каналом");
             return false;
         }
 
-        if (voiceChannel.Type != ChannelType.Voice)
+        if (voiceChannel.Type != DiscordChannelType.Voice)
         {
-            await context.CreateResponseAsync(
-                InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().WithContent(
-                    "Указанный voice_channel не является голосовым каналом"
-                )
-            );
+            await context.RespondAsync("Указанный voiceChannel не является голосовым каналом");
             return false;
         }
 
