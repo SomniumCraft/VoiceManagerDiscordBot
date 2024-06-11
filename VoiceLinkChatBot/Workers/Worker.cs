@@ -1,6 +1,5 @@
 using DSharpPlus;
 using DSharpPlus.Entities;
-using DSharpPlus.EventArgs;
 using Microsoft.Data.Sqlite;
 using VoiceLinkChatBot.Services;
 
@@ -17,8 +16,7 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
 
         await SetupDatabaseAsync(cancellationToken);
         logger.LogInformation("Database set up");
-
-        discordClient.VoiceStateUpdated += OnVoiceStateUpdate;
+        
         await discordClient.ConnectAsync();
 
         await base.StartAsync(cancellationToken);
@@ -59,7 +57,7 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
                     var vc = await discordClient.GetChannelAsync(channelLink.VoiceChannelId);
 
                     var overwritesToDelete = tc.PermissionOverwrites
-                        .Where(e => e.Type == OverwriteType.Member && vc.Users.All(x => x.Id != e.Id))
+                        .Where(e => e.Type == DiscordOverwriteType.Member && vc.Users.All(x => x.Id != e.Id))
                         .ToList();
 
                     foreach (var overwrite in overwritesToDelete)
@@ -72,7 +70,7 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
                         .ToList();
 
                     foreach (var member in membersToOverride)
-                        await tc.AddOverwriteAsync(member, Permissions.AccessChannels | Permissions.SendMessages);
+                        await tc.AddOverwriteAsync(member, DiscordPermissions.AccessChannels | DiscordPermissions.SendMessages);
                     
                     foreach (var discordMember in vc.Users)
                     {
@@ -92,51 +90,8 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        discordClient.VoiceStateUpdated -= OnVoiceStateUpdate;
         await discordClient.DisconnectAsync();
         discordClient.Dispose();
         await base.StopAsync(cancellationToken);
-    }
-    
-    private async Task OnVoiceStateUpdate(DiscordClient client, VoiceStateUpdateEventArgs e)
-    {
-        if(e.After?.Channel?.Id == e.Before?.Channel?.Id) return;
-        if(e.User.IsBot) return;
-        
-        var channelLinks = await channelsService.GetLinkedChannels(e.Guild.Id);
-        
-        if (e.Before?.Channel?.Id != e.After?.Channel?.Id && e.Before?.Channel is not null)
-        {
-            var beforeChannelLinks = channelLinks
-                .Where(x => x.VoiceChannelId == e.Before.Channel.Id)
-                .ToList();
-            
-            foreach (var beforeChannelLink in beforeChannelLinks)
-            {
-                var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
-                await tc.DeleteOverwriteAsync(e.Before.Member);
-            }
-            
-            var message = await e.Before.Channel.SendMessageAsync(new DiscordMessageBuilder()
-                .WithContent($"{(string.IsNullOrEmpty(e.Before.Member.Nickname) ? e.User.GlobalName : e.Before.Member.Nickname)} вышел"));
-            await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{e.User.Id}> вышел"));
-        }
-        
-        if (e.After?.Channel is not null)
-        {
-           var channelLink = channelLinks
-               .Where(x => x.VoiceChannelId == e.After.Channel.Id)
-               .ToList();
-           
-           foreach (var channelLinkModel in channelLink)
-           {
-               var tc = await discordClient.GetChannelAsync(channelLinkModel.TextChannelId);
-               await tc.AddOverwriteAsync(e.After.Member, Permissions.AccessChannels | Permissions.SendMessages);
-           }
-           
-           var message = await e.After.Channel.SendMessageAsync(new DiscordMessageBuilder()
-               .WithContent($"{(string.IsNullOrEmpty(e.After.Member.Nickname) ? e.User.GlobalName : e.After.Member.Nickname)} зашёл"));
-           await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{e.User.Id}> зашёл"));
-        }
     }
 }

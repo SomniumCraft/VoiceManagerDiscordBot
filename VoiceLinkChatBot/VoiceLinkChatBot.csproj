@@ -9,9 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-01941" />
-        <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-01941" />
-        <PackageReference Include="DSharpPlus.SlashCommands" Version="5.0.0-nightly-01941" />
+        <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02287" />
+        <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02287" />
+        <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-02287" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
     </ItemGroup>
