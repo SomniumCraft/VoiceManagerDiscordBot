@@ -28,7 +28,7 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: |
-          ghcr.io/div2005/orchideasalon           
+          ghcr.io/SomniumCraft/VoiceManagerDiscordBot           
         tags: |
           type=schedule
           type=ref,event=branch
