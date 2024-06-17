@@ -9,9 +9,9 @@ using VoiceLinkChatBot.Services;
 namespace VoiceLinkChatBot.Commands;
 
 [Command("channel"), AllowedProcessors(typeof(SlashCommandProcessor))]
-[Description("Команды для управления связи текстового и голосового канала")]
+[Description("Команды для управления привязками каналов")]
 [RequirePermissions(DiscordPermissions.ManageChannels | DiscordPermissions.ManageRoles)]
-public class ChannelLinkCommands(LinkedChannelsService service)
+public class ChannelCommands(ChannelsService service)
 {
     [Command("link")]
     [Description("Связывает текстовый канал с голосовым")]
@@ -45,6 +45,38 @@ public class ChannelLinkCommands(LinkedChannelsService service)
         await service.RemoveLinkAsync(context.Guild.Id, textChannel.Id, voiceChannel.Id);
 
         await context.RespondAsync($"Ну типа отвязал {textChannel.Name} от {voiceChannel.Name}");
+    }
+    
+    [Command("autothread")]
+    [Description("В указанном канале автоматически создаются ветки")]
+    public async ValueTask AutoThread(
+        CommandContext context,
+        [Description("Текстовый канал, который вы хотите привязать")]
+        DiscordChannel channel,
+        [Description("Название ветки")]
+        string name,
+        [Description("Срок жизни ветки")]
+        DiscordAutoArchiveDuration duration,
+        [Description("Закрывать ветку при архивировании?")]
+        bool lockOnArchive
+    )
+    {
+        await service.AddAutoThreadAsync(context.Guild.Id, channel.Id, name, duration, lockOnArchive);
+        
+        await context.RespondAsync($"Ну типа теперь ветки автоматом в {channel.Name}");
+    }
+    
+    [Command("noautothread")]
+    [Description("В указанном канале автоматически создаются ветки")]
+    public async ValueTask NoAutoThread(
+        CommandContext context,
+        [Description("Текстовый канал, который вы хотите привязать")]
+        DiscordChannel channel
+    )
+    {
+        await service.RemoveAutoThreadAsync(context.Guild.Id, channel.Id);
+        
+        await context.RespondAsync($"Ну типа теперь ветки не автоматом в {channel.Name}");
     }
 
     private static async Task<bool> ValidateChannels(

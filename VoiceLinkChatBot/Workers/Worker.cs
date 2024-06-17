@@ -5,7 +5,7 @@ using VoiceLinkChatBot.Services;
 
 namespace VoiceLinkChatBot.Workers;
 
-public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfiguration configuration, LinkedChannelsService channelsService)
+public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfiguration configuration, ChannelsService channelsService)
     : BackgroundService
 {
     private readonly ILogger<Worker> _logger = logger;
@@ -37,7 +37,17 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
                                          "ON linked_channel (" +
                                          "guild_id, " +
                                          "voice_channel_id, " +
-                                         "text_channel_id);";
+                                         "text_channel_id);" +
+                                         "CREATE TABLE IF NOT EXISTS auto_threads_channel (" +
+                                         "guild_id TEXT NOT NULL, " +
+                                         "channel_id TEXT NOT NULL," +
+                                         "name TEXT NOT NULL," +
+                                         "duration TEXT NOT NULL," +
+                                         "lock_on_archive INTEGER);" +
+                                         "CREATE UNIQUE INDEX IF NOT EXISTS unique_index " +
+                                         "ON auto_threads_channel(" +
+                                         "guild_id, " +
+                                         "channel_id);";
         var createTableCommand = new SqliteCommand(createTableString, connection);
         await createTableCommand.ExecuteReaderAsync(cancellationToken);
     }
