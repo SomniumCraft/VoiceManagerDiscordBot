@@ -10,9 +10,7 @@ public class MessageCreatedHandler : IDiscordEventHandler<MessageCreatedEventArg
     {
         var channelsService = discordClient.ServiceProvider.GetRequiredService<ChannelsService>();
         
-        var autoThreadedChannels = await channelsService.GetAutoThreadChannels(args.Guild.Id);
-
-        var autoThreadModel = autoThreadedChannels.FirstOrDefault(x => x.ChannelId == args.Channel.Id);
+        var autoThreadModel = await channelsService.GetAutoThreadChannel(args.Guild.Id, args.Channel.Id);
         if (autoThreadModel != null)
             await args.Message.CreateThreadAsync(autoThreadModel.Name, autoThreadModel.Duration);
     }

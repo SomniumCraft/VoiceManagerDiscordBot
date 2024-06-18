@@ -11,20 +11,15 @@ public class ThreadUpdatedHandler : IDiscordEventHandler<ThreadUpdatedEventArgs>
     {
         var channelsService = discordClient.ServiceProvider.GetRequiredService<ChannelsService>();
 
-        var autoThreadedChannels = await channelsService.GetAutoThreadChannels(args.Guild.Id);
-
-        var autoThreadModel = autoThreadedChannels.FirstOrDefault(x => x.ChannelId == args.ThreadAfter.ParentId);
-        if (autoThreadModel is {LockOnArchive: true})
+        var lockOnArchive = await channelsService.AreChannelThreadsLockedOnArchive(args.Guild.Id, args.ThreadAfter.Id);
+        if (lockOnArchive && args.ThreadAfter.ThreadMetadata.IsArchived)
         {
-            if (args.ThreadAfter.ThreadMetadata.IsArchived)
+            await args.ThreadAfter.ModifyAsync(x =>
             {
-                await args.ThreadAfter.ModifyAsync(x =>
-                {
-                    x.IsArchived = false;
-                    x.Locked = true;
-                    x.AutoArchiveDuration = DiscordAutoArchiveDuration.Hour;
-                });
-            }
+                x.IsArchived = false;
+                x.Locked = true;
+                x.AutoArchiveDuration = DiscordAutoArchiveDuration.Hour;
+            });
         }
     }
 }

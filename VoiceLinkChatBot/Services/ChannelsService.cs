@@ -1,3 +1,4 @@
+using System.Data;
 using DSharpPlus.Entities;
 using Microsoft.Data.Sqlite;
 using VoiceLinkChatBot.Models;
@@ -110,6 +111,48 @@ public class ChannelsService(IConfiguration configuration)
         }
 
         return list;
+    }
+
+    public async Task<bool> AreChannelThreadsLockedOnArchive(ulong guildId, ulong channelId)
+    {
+        const string commandText =
+            "SELECT `lock_on_archive` FROM auto_threads_channel WHERE guild_id=@guildId AND channel_id=@channelId";
+
+        await using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(commandText, connection);
+
+        command.Parameters.AddWithValue("@guildId", guildId.ToString());
+        command.Parameters.AddWithValue("@channelId", channelId.ToString());
+
+        var dataReader = await command.ExecuteReaderAsync();
+        return dataReader.HasRows && Convert.ToBoolean(dataReader.GetInt16(0));
+    }
+    
+    public async Task<AutoThreadModel?> GetAutoThreadChannel(ulong guildId, ulong channelId)
+    {
+        const string commandText =
+            "SELECT * FROM auto_threads_channel WHERE guild_id=@guildId AND channel_id=@channelId";
+
+        await using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var command = new SqliteCommand(commandText, connection);
+
+        command.Parameters.AddWithValue("@guildId", guildId.ToString());
+        command.Parameters.AddWithValue("@channelId", channelId.ToString());
+
+        var dataReader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow);
+
+        if (!await dataReader.ReadAsync()) return null;
+
+        return new AutoThreadModel(
+            ulong.Parse(dataReader.GetString(1)),
+            dataReader.GetString(2),
+            Enum.Parse<DiscordAutoArchiveDuration>(dataReader.GetString(3)),
+            Convert.ToBoolean(dataReader.GetInt16(4))
+        );
     }
 
     public async Task AddAutoThreadAsync(ulong guildId, ulong channelId, string name, DiscordAutoArchiveDuration duration, bool lockOnArchive)
