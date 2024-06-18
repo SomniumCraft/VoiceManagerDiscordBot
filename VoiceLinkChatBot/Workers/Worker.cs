@@ -8,8 +8,6 @@ namespace VoiceLinkChatBot.Workers;
 public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfiguration configuration, ChannelsService channelsService)
     : BackgroundService
 {
-    private readonly ILogger<Worker> _logger = logger;
-
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Starting discord bot");
