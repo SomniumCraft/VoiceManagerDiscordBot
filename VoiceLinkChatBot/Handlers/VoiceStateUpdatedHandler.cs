@@ -28,10 +28,16 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
                 await tc.DeleteOverwriteAsync(args.Before.Member);
             }
 
-            var message = await args.Before.Channel.SendMessageAsync(new DiscordMessageBuilder()
-                .WithContent(
-                    $"{(string.IsNullOrEmpty(args.Before.Member.Nickname) ? args.User.GlobalName : args.Before.Member.Nickname)} вышел"));
-            await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> вышел"));
+            if (args.Before.Channel.Type == DiscordChannelType.Voice)
+            {
+                var message = await args.Before.Channel.SendMessageAsync(
+                    new DiscordMessageBuilder()
+                        .WithContent(
+                            $"{(string.IsNullOrEmpty(args.Before.Member.Nickname) ? args.User.GlobalName : args.Before.Member.Nickname)} вышел"
+                        )
+                );
+                await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> вышел"));
+            }
         }
 
         if (args.After?.Channel is not null)
@@ -47,10 +53,15 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
                     DiscordPermissions.AccessChannels | DiscordPermissions.SendMessages);
             }
 
-            var message = await args.After.Channel.SendMessageAsync(new DiscordMessageBuilder()
-                .WithContent(
-                    $"{(string.IsNullOrEmpty(args.After.Member.Nickname) ? args.User.GlobalName : args.After.Member.Nickname)} зашёл"));
-            await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> зашёл"));
+            if (args.After.Channel.Type == DiscordChannelType.Voice)
+            {
+                var message = await args.After.Channel.SendMessageAsync(new DiscordMessageBuilder()
+                    .WithContent(
+                        $"{(string.IsNullOrEmpty(args.After.Member.Nickname) ? args.User.GlobalName : args.After.Member.Nickname)} зашёл"
+                    )
+                );
+                await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> зашёл"));
+            }
         }
     }
 }
