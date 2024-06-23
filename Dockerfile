@@ -1,10 +1,11 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
+﻿FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/runtime:8.0-alpine AS base
+ARG TARGETARCH
 WORKDIR /app
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 WORKDIR /src
 COPY ["VoiceLinkChatBot/VoiceLinkChatBot.csproj", "VoiceLinkChatBot/"]
-RUN dotnet restore "VoiceLinkChatBot/VoiceLinkChatBot.csproj"
+RUN dotnet restore "VoiceLinkChatBot/VoiceLinkChatBot.csproj" -a $TARGETARCH
 COPY . .
 WORKDIR "/src/VoiceLinkChatBot"
 RUN dotnet build "VoiceLinkChatBot.csproj" -c Release -o /app/build
