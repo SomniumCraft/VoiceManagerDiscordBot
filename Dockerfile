@@ -10,6 +10,6 @@ RUN dotnet publish -a $TARGETARCH --no-restore -o /app
 
 FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine
 WORKDIR /app
-COPY --from=publish /app .
+COPY --from=build /app .
 USER $APP_UID
 ENTRYPOINT ["dotnet", "VoiceLinkChatBot.dll"]
