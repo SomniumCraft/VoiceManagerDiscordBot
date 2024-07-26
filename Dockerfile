@@ -1,18 +1,15 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+ARG TARGETARCH
+WORKDIR /source
+
+COPY VoiceLinkChatBot/*.csproj .
+RUN dotnet restore -a $TARGETARCH
+
+COPY VoiceLinkChatBot/. .
+RUN dotnet publish -a $TARGETARCH --no-restore -o /app
+
+FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine
 WORKDIR /app
-
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["VoiceLinkChatBot/VoiceLinkChatBot.csproj", "VoiceLinkChatBot/"]
-RUN dotnet restore "VoiceLinkChatBot/VoiceLinkChatBot.csproj"
-COPY . .
-WORKDIR "/src/VoiceLinkChatBot"
-RUN dotnet build "VoiceLinkChatBot.csproj" -c Release -o /app/build
-
-FROM build AS publish
-RUN dotnet publish "VoiceLinkChatBot.csproj" -c Release -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app .
+USER $APP_UID
 ENTRYPOINT ["dotnet", "VoiceLinkChatBot.dll"]
