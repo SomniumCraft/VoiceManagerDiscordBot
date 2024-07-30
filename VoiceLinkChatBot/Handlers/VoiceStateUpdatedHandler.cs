@@ -28,21 +28,17 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
                 {
                     var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
                     var newChannel = await tc.CloneAsync();
-                    await channelsService.RemoveLinkAsync(args.Guild.Id, beforeChannelLink.TextChannelId,
-                        beforeChannelLink.VoiceChannelId);
+                    await channelsService.RemoveLinkAsync(args.Guild.Id, beforeChannelLink.TextChannelId, beforeChannelLink.VoiceChannelId);
                     await channelsService.AddLinkAsync(args.Guild.Id, newChannel.Id, beforeChannelLink.VoiceChannelId);
                     await tc.DeleteAsync();
                 }
             }
             else
             {
-                if (args.Before.Member is not null)
+                foreach (var beforeChannelLink in beforeChannelLinks)
                 {
-                    foreach (var beforeChannelLink in beforeChannelLinks)
-                    {
-                        var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
-                        await tc.DeleteOverwriteAsync(args.Before.Member);
-                    }
+                    var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
+                    await tc.DeleteOverwriteAsync(args.Before.Member);
                 }
             }
 
@@ -51,7 +47,7 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
                 var message = await args.Before.Channel.SendMessageAsync(
                     new DiscordMessageBuilder()
                         .WithContent(
-                            $"{(string.IsNullOrEmpty(args.Before.Member?.Nickname) ? args.User.GlobalName : args.Before.Member.Nickname)} вышел"
+                            $"{(string.IsNullOrEmpty(args.Before.Member.Nickname) ? args.User.GlobalName : args.Before.Member.Nickname)} вышел"
                         )
                 );
                 await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> вышел"));
@@ -64,21 +60,18 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
                 .Where(x => x.VoiceChannelId == args.After.Channel.Id)
                 .ToList();
 
-            if (args.After.Member is not null)
+            foreach (var channelLinkModel in channelLink)
             {
-                foreach (var channelLinkModel in channelLink)
-                {
-                    var tc = await discordClient.GetChannelAsync(channelLinkModel.TextChannelId);
-                    await tc.AddOverwriteAsync(args.After.Member,
-                        DiscordPermissions.AccessChannels | DiscordPermissions.SendMessages);
-                }
+                var tc = await discordClient.GetChannelAsync(channelLinkModel.TextChannelId);
+                await tc.AddOverwriteAsync(args.After.Member,
+                    DiscordPermissions.AccessChannels | DiscordPermissions.SendMessages);
             }
 
             if (args.After.Channel.Type == DiscordChannelType.Voice)
             {
                 var message = await args.After.Channel.SendMessageAsync(new DiscordMessageBuilder()
                     .WithContent(
-                        $"{(string.IsNullOrEmpty(args.After.Member?.Nickname) ? args.User.GlobalName : args.After.Member.Nickname)} зашёл"
+                        $"{(string.IsNullOrEmpty(args.After.Member.Nickname) ? args.User.GlobalName : args.After.Member.Nickname)} зашёл"
                     )
                 );
                 await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> зашёл"));
