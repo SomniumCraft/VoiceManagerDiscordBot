@@ -37,19 +37,6 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
                         )
                 );
                 await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> вышел"));
-                if (args.Before.Channel.Users.Count == 0)
-                {
-                    foreach (var beforeChannelLink in beforeChannelLinks)
-                    {
-                        var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
-                        var newChannel = await tc.CloneAsync();
-                        await channelsService.RemoveLinkAsync(args.Guild.Id, beforeChannelLink.TextChannelId,
-                            beforeChannelLink.VoiceChannelId);
-                        await channelsService.AddLinkAsync(args.Guild.Id, newChannel.Id,
-                            beforeChannelLink.VoiceChannelId);
-                        await tc.DeleteAsync();
-                    }
-                }
             }
         }
 
