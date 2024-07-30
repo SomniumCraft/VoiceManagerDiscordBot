@@ -12,6 +12,8 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
         if (args.After?.Channel?.Id == args.Before?.Channel?.Id) return;
         if (args.User.IsBot) return;
 
+        var member = await args.Guild.GetMemberAsync(args.User.Id);
+
         var channelsService = discordClient.ServiceProvider.GetRequiredService<ChannelsService>();
 
         var channelLinks = await channelsService.GetLinkedChannels(args.Guild.Id);
@@ -25,7 +27,16 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
             foreach (var beforeChannelLink in beforeChannelLinks)
             {
                 var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
-                await tc.DeleteOverwriteAsync(args.Before.Member);
+                await tc.DeleteOverwriteAsync(member);
+            }
+
+            if (args.Before.Channel.Users.Count == 0)
+            {
+                foreach (var beforeChannelLink in beforeChannelLinks)
+                {
+                    var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
+                    _ = PurgeChannelAsync(args.Before.Channel, tc);
+                }
             }
 
             if (args.Before.Channel.Type == DiscordChannelType.Voice)
@@ -33,7 +44,7 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
                 var message = await args.Before.Channel.SendMessageAsync(
                     new DiscordMessageBuilder()
                         .WithContent(
-                            $"{(string.IsNullOrEmpty(args.Before.Member.Nickname) ? args.User.GlobalName : args.Before.Member.Nickname)} вышел"
+                            $"{(string.IsNullOrEmpty(member.Nickname) ? args.User.GlobalName : member.Nickname)} вышел"
                         )
                 );
                 await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> вышел"));
@@ -49,7 +60,7 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
             foreach (var channelLinkModel in channelLink)
             {
                 var tc = await discordClient.GetChannelAsync(channelLinkModel.TextChannelId);
-                await tc.AddOverwriteAsync(args.After.Member,
+                await tc.AddOverwriteAsync(member,
                     DiscordPermissions.AccessChannels | DiscordPermissions.SendMessages);
             }
 
@@ -57,11 +68,25 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
             {
                 var message = await args.After.Channel.SendMessageAsync(new DiscordMessageBuilder()
                     .WithContent(
-                        $"{(string.IsNullOrEmpty(args.After.Member.Nickname) ? args.User.GlobalName : args.After.Member.Nickname)} зашёл"
+                        $"{(string.IsNullOrEmpty(member.Nickname) ? args.User.GlobalName : member.Nickname)} зашёл"
                     )
                 );
                 await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.User.Id}> зашёл"));
             }
+        }
+    }
+
+    private async Task PurgeChannelAsync(DiscordChannel voiceChannel, DiscordChannel textChannel)
+    {
+        await Task.Delay(5000);
+        
+        if (voiceChannel.Users.Count == 0)
+        {
+            var lastMessage = await textChannel.SendMessageAsync("Очищаю канал");
+            var source = textChannel.GetMessagesBeforeAsync(lastMessage.Id, 100000)
+                .Where(x => DateTimeOffset.Now - x.Timestamp < TimeSpan.FromDays(13));
+            await textChannel.DeleteMessagesAsync(source);
+            await textChannel.DeleteMessageAsync(lastMessage);
         }
     }
 }

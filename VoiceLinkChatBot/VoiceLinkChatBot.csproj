@@ -14,6 +14,7 @@
         <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-02294" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
+        <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     </ItemGroup>
 
     <ItemGroup>
