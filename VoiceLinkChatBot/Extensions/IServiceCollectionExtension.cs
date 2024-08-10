@@ -13,6 +13,7 @@ public static class IServiceCollectionExtension
             b.HandleVoiceStateUpdated(new VoiceStateUpdatedHandler().Handle);
             b.HandleMessageCreated(new MessageCreatedHandler().Handle);
             b.HandleThreadUpdated(new ThreadUpdatedHandler().Handle);
+            b.HandleGuildMemberAdded(new GuildMemberAddedHandler().Handle);
         });
         return serviceCollection;
     }
