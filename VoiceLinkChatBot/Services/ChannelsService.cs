@@ -191,4 +191,38 @@ public class ChannelsService(IConfiguration configuration)
 
         await command.ExecuteNonQueryAsync();
     }
+
+    public async Task<ulong?> GetOnJoinRole(ulong guildId)
+    {
+        const string commandText = "SELECT * FROM role_on_join WHERE guild_id=@guildId";
+        
+        await using var connection = new SqliteConnection(_connectionString);
+        
+        connection.Open();
+        var command = new SqliteCommand(commandText, connection);
+
+        command.Parameters.AddWithValue("@guildId", guildId.ToString());
+
+        var dataReader = await command.ExecuteReaderAsync(CommandBehavior.SingleRow);
+
+        if (!await dataReader.ReadAsync()) return null;
+
+        return ulong.Parse(dataReader.GetString(1));
+    }
+
+    public async Task AddRoleOnJoin(ulong guildId, ulong roleId)
+    {
+        const string commandText =
+            "INSERT OR IGNORE INTO role_on_join (guild_id, role_id) VALUES(@guildId, @roleId);";
+        
+        await using var connection = new SqliteConnection(_connectionString);
+        
+        connection.Open();
+        var command = new SqliteCommand(commandText, connection);
+
+        command.Parameters.AddWithValue("@guildId", guildId.ToString());
+        command.Parameters.AddWithValue("@roleId", roleId.ToString());
+
+        await command.ExecuteNonQueryAsync();
+    }
 }

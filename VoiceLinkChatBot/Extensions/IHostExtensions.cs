@@ -11,6 +11,7 @@ public static class HostExtensions
         var discordClient = host.Services.GetService<DiscordClient>();
         var commandsExtension = discordClient.UseCommands();
         commandsExtension.AddCommands(typeof(ChannelCommands));
+        commandsExtension.AddCommands(typeof(AutoRoleCommand));
         
         return host;
     }

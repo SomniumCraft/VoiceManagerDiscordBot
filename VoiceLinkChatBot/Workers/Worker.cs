@@ -45,7 +45,10 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
                                          "CREATE UNIQUE INDEX IF NOT EXISTS unique_index " +
                                          "ON auto_threads_channel(" +
                                          "guild_id, " +
-                                         "channel_id);";
+                                         "channel_id);" +
+                                         "CREATE TABLE IF NOT EXISTS role_on_join (" +
+                                         "guild_id," +
+                                         "role_id);";
         var createTableCommand = new SqliteCommand(createTableString, connection);
         await createTableCommand.ExecuteReaderAsync(cancellationToken);
     }
