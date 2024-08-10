@@ -6,7 +6,7 @@ using VoiceLinkChatBot.Workers;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddTransient<ChannelsService>();
-builder.Services.AddDiscordClient(builder.Configuration["DiscordBotToken"], DiscordIntents.AllUnprivileged);
+builder.Services.AddDiscordClient(builder.Configuration["DiscordBotToken"], DiscordIntents.All);
 builder.Services.AddHostedService<Worker>();
 builder.Services.AddEventHandlers();
 
