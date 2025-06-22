@@ -10,7 +10,7 @@ namespace VoiceLinkChatBot.Commands;
 
 [Command("autorole"), AllowedProcessors(typeof(SlashCommandProcessor))]
 [Description("Команды для настройки автороли")]
-[RequirePermissions(DiscordPermissions.ManageChannels | DiscordPermissions.ManageRoles)]
+[RequirePermissions(DiscordPermission.ManageChannels, DiscordPermission.ManageRoles)]
 public class AutoRoleCommand(ChannelsService service)
 {
     [Command("link")]
