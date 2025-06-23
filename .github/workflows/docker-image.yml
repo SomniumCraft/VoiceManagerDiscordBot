@@ -5,6 +5,8 @@ on:
     workflows: [".NET"]
     types:
       - completed
+    branches:
+      - master
   workflow_dispatch:
 
 jobs:
