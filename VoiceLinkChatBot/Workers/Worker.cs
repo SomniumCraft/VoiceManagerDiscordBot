@@ -74,14 +74,14 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
                     foreach (var overwrite in overwritesToDelete)
                         await tc.DeleteOverwriteAsync(await overwrite.GetMemberAsync());
 
-                    var overwritesToAdd = new List<DiscordOverwrite>();
-
                     var membersToOverride = vc.Users
                         .Where(e => e.IsBot == false && tc.PermissionOverwrites.All(x => x.Id != e.Id))
                         .ToList();
 
-                    foreach (var member in membersToOverride)
-                        await tc.AddOverwriteAsync(member, DiscordPermissions.AccessChannels | DiscordPermissions.SendMessages);
+                    await tc.ModifyAsync(x =>
+                    {
+                        x.PermissionOverwrites = membersToOverride.Select(m => new DiscordOverwriteBuilder(m).Allow([DiscordPermission.ViewChannel, DiscordPermission.SendMessages]));
+                    });
                     
                     foreach (var discordMember in vc.Users)
                     {
