@@ -12,7 +12,7 @@ public class GuildMemberAddedHandler : IDiscordEventHandler<GuildMemberAddedEven
 
         var roleId = await channelsService.GetOnJoinRole(args.Guild.Id);
         if(roleId is null) return;
-        var role = args.Guild.GetRole(roleId.Value);
+        var role = await args.Guild.GetRoleAsync(roleId.Value);
         if(role is null) return;
         await args.Member.GrantRoleAsync(role);
     }
