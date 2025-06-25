@@ -10,7 +10,7 @@ namespace VoiceLinkChatBot.Commands;
 
 [Command("channel"), AllowedProcessors(typeof(SlashCommandProcessor))]
 [Description("Команды для управления привязками каналов")]
-[RequirePermissions(DiscordPermission.ManageChannels, DiscordPermission.ManageRoles)]
+[RequirePermissions(DiscordPermissions.ManageChannels | DiscordPermissions.ManageRoles)]
 public class ChannelCommands(ChannelsService service)
 {
     [Command("link")]
@@ -23,9 +23,9 @@ public class ChannelCommands(ChannelsService service)
         DiscordChannel voiceChannel
     )
     {
-        if (!await ValidateGuildAndChannels(context, textChannel, voiceChannel)) return;
+        if (!await ValidateChannels(context, textChannel, voiceChannel)) return;
 
-        await service.AddLinkAsync(context.Guild!.Id, textChannel.Id, voiceChannel.Id);
+        await service.AddLinkAsync(context.Guild.Id, textChannel.Id, voiceChannel.Id);
 
         await context.RespondAsync($"Ну типа привязал {textChannel.Name} к {voiceChannel.Name}");
     }
@@ -40,9 +40,9 @@ public class ChannelCommands(ChannelsService service)
         DiscordChannel voiceChannel
     )
     {
-        if (!await ValidateGuildAndChannels(context, textChannel, voiceChannel)) return;
+        if (!await ValidateChannels(context, textChannel, voiceChannel)) return;
 
-        await service.RemoveLinkAsync(context.Guild!.Id, textChannel.Id, voiceChannel.Id);
+        await service.RemoveLinkAsync(context.Guild.Id, textChannel.Id, voiceChannel.Id);
 
         await context.RespondAsync($"Ну типа отвязал {textChannel.Name} от {voiceChannel.Name}");
     }
@@ -61,7 +61,7 @@ public class ChannelCommands(ChannelsService service)
         bool lockOnArchive
     )
     {
-        await service.AddAutoThreadAsync(context.Guild!.Id, channel.Id, name, duration, lockOnArchive);
+        await service.AddAutoThreadAsync(context.Guild.Id, channel.Id, name, duration, lockOnArchive);
         
         await context.RespondAsync($"Ну типа теперь ветки автоматом в {channel.Name}");
     }
@@ -74,23 +74,17 @@ public class ChannelCommands(ChannelsService service)
         DiscordChannel channel
     )
     {
-        await service.RemoveAutoThreadAsync(context.Guild!.Id, channel.Id);
+        await service.RemoveAutoThreadAsync(context.Guild.Id, channel.Id);
         
         await context.RespondAsync($"Ну типа теперь ветки не автоматом в {channel.Name}");
     }
 
-    private static async Task<bool> ValidateGuildAndChannels(
+    private static async Task<bool> ValidateChannels(
         CommandContext context,
         DiscordChannel textChannel,
         DiscordChannel voiceChannel
     )
     {
-        if (context.Guild is null)
-        {
-            await context.RespondAsync($"Хрен его знает, не получилось найти гильдию");
-            return false;
-        }
-
         if (textChannel.Type != DiscordChannelType.Text)
         {
             await context.RespondAsync("Указанный textChannel не является текстовым каналом");

@@ -1,23 +1,10 @@
-using DSharpPlus.Commands;
 using DSharpPlus.Extensions;
-using VoiceLinkChatBot.Commands;
 using VoiceLinkChatBot.Handlers;
 
 namespace VoiceLinkChatBot.Extensions;
 
 public static class IServiceCollectionExtension
 {
-    public static IServiceCollection AddCommands(this IServiceCollection serviceCollection)
-    {
-        serviceCollection.AddCommandsExtension((IServiceProvider serviceProvider, CommandsExtension extension) =>
-        {
-            extension.AddCommands<ChannelCommands>();
-            extension.AddCommands<AutoRoleCommand>();
-        });
-
-        return serviceCollection;
-    }
-
     public static IServiceCollection AddEventHandlers(this IServiceCollection serviceCollection)
     {
         serviceCollection.AddTransient<MessageCreatedHandler>();

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-VoiceLinkChatBot-E7C74F22-8D38-4A06-A62D-9D612708E1AC</UserSecretsId>
@@ -9,12 +9,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02525" />
-        <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02525" />
-        <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-02525" />
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.6" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
-        <PackageReference Include="System.Linq.Async" Version="6.0.3" />
+        <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02294" />
+        <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02294" />
+        <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-02294" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
+        <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     </ItemGroup>
 
     <ItemGroup>
