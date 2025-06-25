@@ -57,7 +57,10 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
         foreach (var channelLinkModel in channelLink)
         {
             var tc = await discordClient.GetChannelAsync(channelLinkModel.TextChannelId);
-            await tc.ModifyAsync(x => { x.PermissionOverwrites = [new DiscordOverwriteBuilder(member).Allow([DiscordPermission.ViewChannel, DiscordPermission.SendMessages])]; });
+            //False positive detection of DSP0007, there are no multiple calls to AddOverwriteAsync on the same channel
+            #pragma warning disable DSP0007
+            await tc.AddOverwriteAsync(member, new DiscordPermissions([DiscordPermission.ViewChannel, DiscordPermission.SendMessages]));
+            #pragma warning restore DSP0007
         }
 
         if (afterChannel.Type != DiscordChannelType.Voice) return;

@@ -14,7 +14,7 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
 
         await SetupDatabaseAsync(cancellationToken);
         logger.LogInformation("Database set up");
-        
+
         await discordClient.ConnectAsync();
 
         await base.StartAsync(cancellationToken);
@@ -52,7 +52,7 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
         var createTableCommand = new SqliteCommand(createTableString, connection);
         await createTableCommand.ExecuteReaderAsync(cancellationToken);
     }
-    
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -61,7 +61,7 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
             foreach (var guildId in guildIds)
             {
                 var channelLinks = await channelsService.GetLinkedChannels(guildId);
-                
+
                 foreach (var channelLink in channelLinks)
                 {
                     var tc = await discordClient.GetChannelAsync(channelLink.TextChannelId);
@@ -71,30 +71,20 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
                         .Where(e => e.Type == DiscordOverwriteType.Member && vc.Users.All(x => x.Id != e.Id))
                         .ToList();
 
-                    foreach (var overwrite in overwritesToDelete)
-                        await tc.DeleteOverwriteAsync(await overwrite.GetMemberAsync());
-
                     var membersToOverride = vc.Users
                         .Where(e => e.IsBot == false && tc.PermissionOverwrites.All(x => x.Id != e.Id))
                         .ToList();
 
-                    await tc.ModifyAsync(x =>
-                    {
-                        x.PermissionOverwrites = membersToOverride.Select(m => new DiscordOverwriteBuilder(m).Allow([DiscordPermission.ViewChannel, DiscordPermission.SendMessages]));
-                    });
-                    
-                    foreach (var discordMember in vc.Users)
-                    {
-                        if(discordMember.IsBot) continue;
+                    if (overwritesToDelete.Count == 0 && membersToOverride.Count == 0) return;
 
-                        var firstOrDefault = tc.PermissionOverwrites
-                            .FirstOrDefault(e => e.Id == discordMember.Id);
-                        
-                        if(firstOrDefault == null) continue;
-                    }
+                    var modifiedOverwrites = tc.PermissionOverwrites.Except(overwritesToDelete).Select(DiscordOverwriteBuilder.From).ToList();
+                    modifiedOverwrites.AddRange(membersToOverride.Select(member =>
+                        new DiscordOverwriteBuilder(member).Allow([DiscordPermission.ViewChannel, DiscordPermission.SendMessages])));
+
+                    await tc.ModifyAsync(x => { x.PermissionOverwrites = modifiedOverwrites; });
                 }
             }
-            
+
             await Task.Delay(10000, stoppingToken);
         }
     }
