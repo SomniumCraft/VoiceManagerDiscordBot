@@ -10,8 +10,8 @@ namespace VoiceLinkChatBot.Commands;
 
 [Command("autorole"), AllowedProcessors(typeof(SlashCommandProcessor))]
 [Description("Команды для настройки автороли")]
-[RequirePermissions(DiscordPermissions.ManageChannels | DiscordPermissions.ManageRoles)]
-public class AutoRoleCommand(ChannelsService service)
+[RequirePermissions(DiscordPermission.ManageChannels, DiscordPermission.ManageRoles)]
+public class AutoRoleCommand(ChannelsService service, ILogger<AutoRoleCommand> logger)
 {
     [Command("link")]
     public async ValueTask Link(
@@ -21,11 +21,23 @@ public class AutoRoleCommand(ChannelsService service)
     {
         if (context.Guild is null)
         {
-            await context.RespondAsync($"Не удалось найти гильдию");
+            await RespondAsync(context, "Не удалось найти гильдию");
             return;
         }
         await service.AddRoleOnJoin(context.Guild.Id, role.Id);
 
-        await context.RespondAsync($"Вот ета роль теперь тут дается всем при джоине");
+        await RespondAsync(context, "Вот ета роль теперь тут дается всем при джоине");
+    }
+
+    private async Task RespondAsync(CommandContext context, string content)
+    {
+        try
+        {
+            await context.RespondAsync(content);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to create response");
+        }
     }
 }
