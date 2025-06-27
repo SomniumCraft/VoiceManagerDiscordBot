@@ -5,14 +5,14 @@ using VoiceLinkChatBot.Services;
 
 namespace VoiceLinkChatBot.Handlers;
 
-public class ThreadUpdatedHandler : IDiscordEventHandler<ThreadUpdatedEventArgs>
+public class ThreadUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, ChannelsService channelsService) : IEventHandler<ThreadUpdatedEventArgs>
 {
-    public async Task Handle(DiscordClient discordClient, ThreadUpdatedEventArgs args)
+    public async Task HandleEventAsync(DiscordClient discordClient, ThreadUpdatedEventArgs args)
     {
-        var channelsService = discordClient.ServiceProvider.GetRequiredService<ChannelsService>();
-
         var lockOnArchive = await channelsService.AreChannelThreadsLockedOnArchive(args.Guild.Id, args.ThreadAfter.Id);
-        if (lockOnArchive && args.ThreadAfter.ThreadMetadata.IsArchived)
+        if (!lockOnArchive || !args.ThreadAfter.ThreadMetadata.IsArchived) return;
+
+        try
         {
             await args.ThreadAfter.ModifyAsync(x =>
             {
@@ -20,6 +20,11 @@ public class ThreadUpdatedHandler : IDiscordEventHandler<ThreadUpdatedEventArgs>
                 x.Locked = true;
                 x.AutoArchiveDuration = DiscordAutoArchiveDuration.Hour;
             });
+            logger.LogInformation("Locked Thread: {Thread}", args.ThreadAfter);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to lock Thread: {Thread}", args.ThreadAfter);
         }
     }
 }

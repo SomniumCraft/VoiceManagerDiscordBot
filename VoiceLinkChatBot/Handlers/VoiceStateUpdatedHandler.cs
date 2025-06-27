@@ -7,41 +7,56 @@ using VoiceLinkChatBot.Services;
 
 namespace VoiceLinkChatBot.Handlers;
 
-public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEventArgs>
+public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, ChannelsService channelsService) : IEventHandler<VoiceStateUpdatedEventArgs>
 {
-    public async Task Handle(DiscordClient discordClient, VoiceStateUpdatedEventArgs args)
+    public async Task HandleEventAsync(DiscordClient discordClient, VoiceStateUpdatedEventArgs args)
     {
         if (args.After?.ChannelId == args.Before?.ChannelId) return;
 
-        var user = await args.GetUserAsync();
-        if (user?.IsBot == true) return;
-
-        var guild = await args.GetGuildAsync();
+        DiscordGuild? guild;
+        try
+        {
+            guild = await args.GetGuildAsync();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to load Guild by Id: {UserId}", args.GuildId);
+            return;
+        }
         if (guild is null) return;
 
-        DiscordMember member;
+        DiscordMember? member;
         try
         {
             member = await guild.GetMemberAsync(args.UserId);
         }
-        catch (NotFoundException)
+        catch (Exception e)
         {
-            //TODO: logging
+            logger.LogError(e,"Member of Guild: {GuildId} with UserId: {UserId} not found", guild.Id, args.UserId);
             return;
         }
-
-        var channelsService = discordClient.ServiceProvider.GetRequiredService<ChannelsService>();
+        if (member.IsBot) return;
 
         var channelLinks = await channelsService.GetLinkedChannels(guild.Id);
 
-        var beforeChannel = args.Before is null ? null : await args.Before.GetChannelAsync();
-        var afterChannel = args.After is null ? null : await args.After.GetChannelAsync();
+        DiscordChannel? beforeChannel;
+        DiscordChannel? afterChannel;
+        try
+        {
+            beforeChannel = args.Before is null ? null : await args.Before.GetChannelAsync();
+            afterChannel = args.After is null ? null : await args.After.GetChannelAsync();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to load channels");
+            return;
+        }
 
         await HandlePreviousChannel(discordClient, args, beforeChannel, channelLinks, member);
         await HandleNewChannel(discordClient, args, afterChannel, channelLinks, member);
     }
 
-    private static async Task HandleNewChannel(
+    private async Task HandleNewChannel(
         DiscordClient discordClient,
         VoiceStateUpdatedEventArgs args,
         DiscordChannel? afterChannel,
@@ -56,23 +71,52 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
 
         foreach (var channelLinkModel in channelLink)
         {
-            var tc = await discordClient.GetChannelAsync(channelLinkModel.TextChannelId);
-            //False positive detection of DSP0007, there are no multiple calls to AddOverwriteAsync on the same channel
-            #pragma warning disable DSP0007
-            await tc.AddOverwriteAsync(member, new DiscordPermissions([DiscordPermission.ViewChannel, DiscordPermission.SendMessages]));
-            #pragma warning restore DSP0007
+            DiscordChannel? tc;
+            try
+            {
+                tc = await discordClient.GetChannelAsync(channelLinkModel.TextChannelId);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to get Channel by Id: {ChannelId}", channelLinkModel.TextChannelId);
+                continue;
+            }
+
+            try
+            {
+                //False positive detection of DSP0007, there are no multiple calls to AddOverwriteAsync on the same channel
+#pragma warning disable DSP0007
+                await tc.AddOverwriteAsync(member, new DiscordPermissions([DiscordPermission.ViewChannel, DiscordPermission.SendMessages]));
+#pragma warning restore DSP0007
+                logger.LogInformation("Added Member: {Member} to Channel: {Channel}", member, tc);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to add overwrites to Member: {Member}", member);
+            }
         }
 
         if (afterChannel.Type != DiscordChannelType.Voice) return;
-        var message = await afterChannel.SendMessageAsync(new DiscordMessageBuilder()
-            .WithContent(
-                $"{(string.IsNullOrEmpty(member.Nickname) ? member.GlobalName : member.Nickname)} зашёл"
-            )
-        );
-        await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.UserId}> зашёл"));
+
+        try
+        {
+            var message = await afterChannel.SendMessageAsync(new DiscordMessageBuilder()
+                .WithContent(
+                    $"{(string.IsNullOrEmpty(member.Nickname) ? member.GlobalName : member.Nickname)} зашёл"
+                )
+            );
+            logger.LogInformation("Sent Message: {Message} to Channel: {Channel}", message, afterChannel);
+
+            await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.UserId}> зашёл"));
+            logger.LogInformation("Modified Message: {Message} in Channel: {Channel}", member, afterChannel);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to send or modify message");
+        }
     }
 
-    private static async Task HandlePreviousChannel(
+    private async Task HandlePreviousChannel(
         DiscordClient discordClient,
         VoiceStateUpdatedEventArgs args,
         DiscordChannel? beforeChannel,
@@ -87,41 +131,76 @@ public class VoiceStateUpdatedHandler : IDiscordEventHandler<VoiceStateUpdatedEv
 
         foreach (var beforeChannelLink in beforeChannelLinks)
         {
-            var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
+            DiscordChannel? tc;
+            try
+            {
+                tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to get Channel by Id: {ChannelId}", beforeChannelLink.TextChannelId);
+                continue;
+            }
+
             await tc.DeleteOverwriteAsync(member);
+            logger.LogInformation("Deleted overwrite for Member: {Member} for Channel: {Channel}", member, tc);
         }
 
         if (beforeChannel.Users.Count == 0)
         {
             foreach (var beforeChannelLink in beforeChannelLinks)
             {
-                var tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
+                DiscordChannel? tc;
+                try
+                {
+                    tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Failed to get Channel by Id: {ChannelId}", beforeChannelLink.TextChannelId);
+                    continue;
+                }
                 _ = PurgeChannelAsync(beforeChannel, tc);
             }
         }
 
         if (beforeChannel.Type != DiscordChannelType.Voice) return;
 
-        var message = await beforeChannel.SendMessageAsync(
-            new DiscordMessageBuilder()
-                .WithContent(
-                    $"{(string.IsNullOrEmpty(member.Nickname) ? member.GlobalName : member.Nickname)} вышел"
-                )
-        );
-        await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.UserId}> вышел"));
+        try
+        {
+            var message = await beforeChannel.SendMessageAsync(
+                new DiscordMessageBuilder()
+                    .WithContent(
+                        $"{(string.IsNullOrEmpty(member.Nickname) ? member.GlobalName : member.Nickname)} вышел"
+                    )
+            );
+            await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.UserId}> вышел"));
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to send or modify message");
+        }
     }
 
-    private static async Task PurgeChannelAsync(DiscordChannel voiceChannel, DiscordChannel textChannel)
+    private async Task PurgeChannelAsync(DiscordChannel voiceChannel, DiscordChannel textChannel)
     {
         await Task.Delay(5000);
 
-        if (voiceChannel.Users.Count == 0)
+        try
         {
-            var lastMessage = await textChannel.SendMessageAsync("Очищаю канал");
-            var source = textChannel.GetMessagesBeforeAsync(lastMessage.Id, 100000)
-                .Where(x => DateTimeOffset.Now - x.Timestamp < TimeSpan.FromDays(13));
-            await textChannel.DeleteMessagesAsync(source);
-            await textChannel.DeleteMessageAsync(lastMessage);
+            if (voiceChannel.Users.Count == 0)
+            {
+                var lastMessage = await textChannel.SendMessageAsync("Очищаю канал");
+                var source = textChannel.GetMessagesBeforeAsync(lastMessage.Id, 100000)
+                    .Where(x => DateTimeOffset.Now - x.Timestamp < TimeSpan.FromDays(13));
+                await textChannel.DeleteMessagesAsync(source);
+                await textChannel.DeleteMessageAsync(lastMessage);
+                logger.LogInformation("Purged Channel: {Channel}", textChannel);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Failed to purge channel");
         }
     }
 }
