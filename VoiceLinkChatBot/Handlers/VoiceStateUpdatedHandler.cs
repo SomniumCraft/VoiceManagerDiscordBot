@@ -52,13 +52,14 @@ public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, 
             return;
         }
 
-        await HandlePreviousChannel(discordClient, args, beforeChannel, channelLinks, member);
-        await HandleNewChannel(discordClient, args, afterChannel, channelLinks, member);
+        await HandlePreviousChannel(discordClient, args, guild.Id, beforeChannel, channelLinks, member);
+        await HandleNewChannel(discordClient, args, guild.Id, afterChannel, channelLinks, member);
     }
 
     private async Task HandleNewChannel(
         DiscordClient discordClient,
         VoiceStateUpdatedEventArgs args,
+        ulong guildId,
         DiscordChannel? afterChannel,
         List<ChannelLinkModel> channelLinks,
         DiscordMember member)
@@ -75,6 +76,11 @@ public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, 
             try
             {
                 tc = await discordClient.GetChannelAsync(channelLinkModel.TextChannelId);
+            }
+            catch (NotFoundException)
+            {
+                await HandleNotFoundChannel(guildId, channelLinkModel);
+                continue;
             }
             catch (Exception e)
             {
@@ -119,6 +125,7 @@ public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, 
     private async Task HandlePreviousChannel(
         DiscordClient discordClient,
         VoiceStateUpdatedEventArgs args,
+        ulong guildId,
         DiscordChannel? beforeChannel,
         List<ChannelLinkModel> channelLinks,
         DiscordMember member)
@@ -135,6 +142,11 @@ public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, 
             try
             {
                 tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
+            }
+            catch (NotFoundException)
+            {
+                await HandleNotFoundChannel(guildId, beforeChannelLink);
+                continue;
             }
             catch (Exception e)
             {
@@ -154,6 +166,11 @@ public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, 
                 try
                 {
                     tc = await discordClient.GetChannelAsync(beforeChannelLink.TextChannelId);
+                }
+                catch (NotFoundException)
+                {
+                    await HandleNotFoundChannel(guildId, beforeChannelLink);
+                    continue;
                 }
                 catch (Exception e)
                 {
@@ -202,5 +219,15 @@ public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, 
         {
             logger.LogError(e, "Failed to purge channel");
         }
+    }
+
+    private async Task HandleNotFoundChannel(ulong guildId, ChannelLinkModel channelLink)
+    {
+        logger.LogInformation("Text channel not found Id: {Id}", channelLink.TextChannelId);
+        await channelsService.RemoveLinkAsync(guildId, channelLink.TextChannelId, channelLink.VoiceChannelId);
+        logger.LogInformation("Removed channel link GuildId: {GuildId} TextChannelId: {TextChannelId} VoiceChannelId: {VoiceChannelId}",
+            guildId,
+            channelLink.TextChannelId,
+            channelLink.VoiceChannelId);
     }
 }

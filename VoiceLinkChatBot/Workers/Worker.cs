@@ -1,5 +1,6 @@
 using DSharpPlus;
 using DSharpPlus.Entities;
+using DSharpPlus.Exceptions;
 using Microsoft.Data.Sqlite;
 using VoiceLinkChatBot.Models;
 using VoiceLinkChatBot.Services;
@@ -69,14 +70,14 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
             foreach (var guildId in guildIds)
             {
                 var channelLinks = await channelsService.GetLinkedChannels(guildId);
-                await SyncLinkedChannels(channelLinks);
+                await SyncLinkedChannels(guildId, channelLinks);
             }
 
             await Task.Delay(10000, stoppingToken);
         }
     }
 
-    private async Task SyncLinkedChannels(List<ChannelLinkModel> channelLinks)
+    private async Task SyncLinkedChannels(ulong guildId, List<ChannelLinkModel> channelLinks)
     {
         foreach (var channelLink in channelLinks)
         {
@@ -84,6 +85,13 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
             try
             {
                 tc = await discordClient.GetChannelAsync(channelLink.TextChannelId);
+            }
+            catch (NotFoundException)
+            {
+                logger.LogInformation("Text channel not found Id: {Id}", channelLink.TextChannelId);
+                await channelsService.RemoveLinkAsync(guildId, channelLink.TextChannelId, channelLink.VoiceChannelId);
+                logger.LogInformation("Removed channel link GuildId: {GuildId} TextChannelId: {TextChannelId} VoiceChannelId: {VoiceChannelId}", guildId, channelLink.TextChannelId, channelLink.VoiceChannelId);
+                continue;
             }
             catch (Exception e)
             {
@@ -95,6 +103,13 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
             try
             {
                 vc = await discordClient.GetChannelAsync(channelLink.VoiceChannelId);
+            }
+            catch (NotFoundException)
+            {
+                logger.LogInformation("Voice channel not found Id: {Id}", channelLink.VoiceChannelId);
+                await channelsService.RemoveLinkAsync(guildId, channelLink.TextChannelId, channelLink.VoiceChannelId);
+                logger.LogInformation("Removed channel link GuildId: {GuildId} TextChannelId: {TextChannelId} VoiceChannelId: {VoiceChannelId}", guildId, channelLink.TextChannelId, channelLink.VoiceChannelId);
+                continue;
             }
             catch (Exception e)
             {
@@ -110,7 +125,7 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
                 .Where(e => e.IsBot == false && tc.PermissionOverwrites.All(x => x.Id != e.Id))
                 .ToList();
 
-            if (overwritesToDelete.Count == 0 && membersToOverride.Count == 0) return;
+            if (overwritesToDelete.Count == 0 && membersToOverride.Count == 0) continue;
 
             var modifiedOverwrites = tc.PermissionOverwrites.Except(overwritesToDelete).Select(DiscordOverwriteBuilder.From).ToList();
             modifiedOverwrites.AddRange(membersToOverride.Select(member =>
