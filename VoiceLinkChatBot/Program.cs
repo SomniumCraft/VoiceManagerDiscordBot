@@ -1,11 +1,15 @@
 using DSharpPlus;
 using DSharpPlus.Extensions;
+using Serilog;
 using VoiceLinkChatBot.Extensions;
 using VoiceLinkChatBot.Services;
 using VoiceLinkChatBot.Settings;
 using VoiceLinkChatBot.Workers;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddSerilog((_, lc) => lc
+    .ReadFrom.Configuration(builder.Configuration));
+
 builder.Services.AddTransient<ChannelsService>()
     .Configure<DiscordSettings>(builder.Configuration.GetRequiredSection(DiscordSettings.SectionName))
     .AddDiscordClient(
