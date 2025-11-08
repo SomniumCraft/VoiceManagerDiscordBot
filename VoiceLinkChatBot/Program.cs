@@ -11,6 +11,7 @@ builder.Services.AddSerilog((_, lc) => lc
     .ReadFrom.Configuration(builder.Configuration));
 
 builder.Services.AddTransient<ChannelsService>()
+    .AddTransient<ChannelPurger>()
     .Configure<DiscordSettings>(builder.Configuration.GetRequiredSection(DiscordSettings.SectionName))
     .AddDiscordClient(
         builder.Configuration

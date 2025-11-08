@@ -7,7 +7,11 @@ using VoiceLinkChatBot.Services;
 
 namespace VoiceLinkChatBot.Handlers;
 
-public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, ChannelsService channelsService) : IEventHandler<VoiceStateUpdatedEventArgs>
+public class VoiceStateUpdatedHandler(
+    ILogger<VoiceStateUpdatedHandler> logger,
+    ChannelsService channelsService,
+    ChannelPurger channelPurger)
+    : IEventHandler<VoiceStateUpdatedEventArgs>
 {
     public async Task HandleEventAsync(DiscordClient discordClient, VoiceStateUpdatedEventArgs args)
     {
@@ -177,7 +181,7 @@ public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, 
                     logger.LogError(e, "Failed to get Channel by Id: {ChannelId}", beforeChannelLink.TextChannelId);
                     continue;
                 }
-                _ = PurgeChannelAsync(beforeChannel, tc);
+                _ = channelPurger.PurgeChannelAsync(beforeChannel, tc);
             }
         }
 
@@ -196,28 +200,6 @@ public class VoiceStateUpdatedHandler(ILogger<VoiceStateUpdatedHandler> logger, 
         catch (Exception e)
         {
             logger.LogError(e, "Failed to send or modify message");
-        }
-    }
-
-    private async Task PurgeChannelAsync(DiscordChannel voiceChannel, DiscordChannel textChannel)
-    {
-        await Task.Delay(5000);
-
-        try
-        {
-            if (voiceChannel.Users.Count == 0)
-            {
-                var lastMessage = await textChannel.SendMessageAsync("Очищаю канал");
-                var source = textChannel.GetMessagesBeforeAsync(lastMessage.Id, 100000)
-                    .Where(x => DateTimeOffset.Now - x.Timestamp < TimeSpan.FromDays(13));
-                await textChannel.DeleteMessagesAsync(source);
-                await textChannel.DeleteMessageAsync(lastMessage);
-                logger.LogInformation("Purged Channel: {Channel}", textChannel);
-            }
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, "Failed to purge channel");
         }
     }
 
