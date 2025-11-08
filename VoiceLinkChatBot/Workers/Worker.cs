@@ -7,7 +7,12 @@ using VoiceLinkChatBot.Services;
 
 namespace VoiceLinkChatBot.Workers;
 
-public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfiguration configuration, ChannelsService channelsService)
+public class Worker(
+    ILogger<Worker> logger,
+    DiscordClient discordClient,
+    IConfiguration configuration,
+    ChannelsService channelsService,
+    ChannelPurger channelPurger)
     : BackgroundService
 {
     public override async Task StartAsync(CancellationToken cancellationToken)
@@ -139,6 +144,11 @@ public class Worker(ILogger<Worker> logger, DiscordClient discordClient, IConfig
             catch (Exception e)
             {
                 logger.LogError(e, "Failed to modify overwrites in Channel: {Channel}", tc);
+            }
+
+            if (vc.Users.Count == 0)
+            {
+                _ = channelPurger.PurgeChannelAsync(vc, tc);
             }
         }
     }
