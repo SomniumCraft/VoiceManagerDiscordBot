@@ -75,10 +75,21 @@ public class VoiceStateUpdatedHandler(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to load Guild by Id: {UserId}", args.GuildId);
+            logger.LogError(e, "Failed to load Guild by Id: {GuildId}", args.GuildId);
             return;
         }
-        if (guild is null) return;
+        if (guild is null)
+        {
+            try
+            {
+                guild = await discordClient.GetGuildAsync(args.Before?.GuildId ?? args.After?.GuildId ?? throw new NullReferenceException());
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Guild is NULL");
+                return;
+            }
+        }
 
         DiscordMember? member;
         try
