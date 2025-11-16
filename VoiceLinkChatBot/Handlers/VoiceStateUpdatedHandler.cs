@@ -15,6 +15,57 @@ public class VoiceStateUpdatedHandler(
 {
     public async Task HandleEventAsync(DiscordClient discordClient, VoiceStateUpdatedEventArgs args)
     {
+        logger.LogInformation("Received VOICE_STATE_UPDATE event Before: " +
+                              "{BeforeGuildId} " +
+                              "{BeforeChannelId} " +
+                              "{BeforeUserId} " +
+                              "{BeforeSessionId} " +
+                              "{BeforeIsServerDeafened} " +
+                              "{BeforeIsServerMuted} " +
+                              "{BeforeIsSelfDeafened} " +
+                              "{BeforeIsSelfMuted} " +
+                              "{BeforeIsSelfVideo} " +
+                              "{BeforeIsSelfStream} " +
+                              "{BeforeIsSuppressed} " +
+                              "{BeforeRequestToSpeakTimestamp} " +
+                              "After: " +
+                              "{AfterGuildId} " +
+                              "{AfterChannelId} " +
+                              "{AfterUserId} " +
+                              "{AfterSessionId} " +
+                              "{AfterIsServerDeafened} " +
+                              "{AfterIsServerMuted} " +
+                              "{AfterIsSelfDeafened} " +
+                              "{AfterIsSelfMuted} " +
+                              "{AfterIsSelfVideo} " +
+                              "{AfterIsSelfStream} " +
+                              "{AfterIsSuppressed} " +
+                              "{AfterRequestToSpeakTimestamp} ",
+            args.Before?.GuildId,
+            args.Before?.ChannelId,
+            args.Before?.UserId,
+            args.Before?.SessionId,
+            args.Before?.IsServerDeafened,
+            args.Before?.IsServerMuted,
+            args.Before?.IsSelfDeafened,
+            args.Before?.IsSelfMuted,
+            args.Before?.IsSelfVideo,
+            args.Before?.IsSelfStream,
+            args.Before?.IsSuppressed,
+            args.Before?.RequestToSpeakTimestamp,
+            args.After?.GuildId,
+            args.After?.ChannelId,
+            args.After?.UserId,
+            args.After?.SessionId,
+            args.After?.IsServerDeafened,
+            args.After?.IsServerMuted,
+            args.After?.IsSelfDeafened,
+            args.After?.IsSelfMuted,
+            args.After?.IsSelfVideo,
+            args.After?.IsSelfStream,
+            args.After?.IsSuppressed,
+            args.After?.RequestToSpeakTimestamp);
+
         if (args.After?.ChannelId == args.Before?.ChannelId) return;
 
         DiscordGuild? guild;
