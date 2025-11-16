@@ -15,6 +15,7 @@ public class VoiceStateUpdatedHandler(
 {
     public async Task HandleEventAsync(DiscordClient discordClient, VoiceStateUpdatedEventArgs args)
     {
+        var traceId = Guid.NewGuid();
         logger.LogInformation("Received VOICE_STATE_UPDATE event Before: " +
                               "{BeforeGuildId} " +
                               "{BeforeChannelId} " +
@@ -40,7 +41,8 @@ public class VoiceStateUpdatedHandler(
                               "{AfterIsSelfVideo} " +
                               "{AfterIsSelfStream} " +
                               "{AfterIsSuppressed} " +
-                              "{AfterRequestToSpeakTimestamp} ",
+                              "{AfterRequestToSpeakTimestamp} " +
+                              "TraceId: {TraceId}",
             args.Before?.GuildId,
             args.Before?.ChannelId,
             args.Before?.UserId,
@@ -64,9 +66,14 @@ public class VoiceStateUpdatedHandler(
             args.After?.IsSelfVideo,
             args.After?.IsSelfStream,
             args.After?.IsSuppressed,
-            args.After?.RequestToSpeakTimestamp);
+            args.After?.RequestToSpeakTimestamp,
+            traceId);
 
-        if (args.After?.ChannelId == args.Before?.ChannelId) return;
+        if (args.After?.ChannelId == args.Before?.ChannelId)
+        {
+            logger.LogInformation("Before channel == After channel, Before channel Id: {BeforeChannelId}, After channel Id: {AfterChannelId} TraceId: {TraceId}", args.Before?.ChannelId, args.After?.ChannelId, traceId);
+            return;
+        }
 
         DiscordGuild? guild;
         try
@@ -75,18 +82,19 @@ public class VoiceStateUpdatedHandler(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to load Guild by Id: {GuildId}", args.GuildId);
+            logger.LogError(e, "Failed to load Guild by Id: {GuildId} TraceId: {TraceId}", args.GuildId, traceId);
             return;
         }
         if (guild is null)
         {
+            logger.LogWarning("Guild is NULL, TraceId: {TraceId}", traceId);
             try
             {
                 guild = await discordClient.GetGuildAsync(args.Before?.GuildId ?? args.After?.GuildId ?? throw new NullReferenceException());
             }
             catch (Exception e)
             {
-                logger.LogError("Guild is NULL");
+                logger.LogError("Guild is NULL, TraceId: {TraceId}", traceId);
                 return;
             }
         }
@@ -98,10 +106,15 @@ public class VoiceStateUpdatedHandler(
         }
         catch (Exception e)
         {
-            logger.LogError(e,"Member of Guild: {GuildId} with UserId: {UserId} not found", guild.Id, args.UserId);
+            logger.LogError(e,"Member of Guild: {GuildId} with UserId: {UserId} not found TraceId: {TraceId}", guild.Id, args.UserId, traceId);
             return;
         }
-        if (member.IsBot) return;
+
+        if (member.IsBot)
+        {
+            logger.LogInformation("User is Bot TraceId: {TraceId}", traceId);
+            return;
+        }
 
         var channelLinks = await channelsService.GetLinkedChannels(guild.Id);
 
@@ -114,12 +127,12 @@ public class VoiceStateUpdatedHandler(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to load channels");
+            logger.LogError(e, "Failed to load channels, TraceId: {TraceId}", traceId);
             return;
         }
 
-        await HandlePreviousChannel(discordClient, args, guild.Id, beforeChannel, channelLinks, member);
-        await HandleNewChannel(discordClient, args, guild.Id, afterChannel, channelLinks, member);
+        await HandlePreviousChannel(discordClient, args, guild.Id, beforeChannel, afterChannel, channelLinks, member, traceId);
+        await HandleNewChannel(discordClient, args, guild.Id, afterChannel, channelLinks, member, traceId);
     }
 
     private async Task HandleNewChannel(
@@ -128,9 +141,16 @@ public class VoiceStateUpdatedHandler(
         ulong guildId,
         DiscordChannel? afterChannel,
         List<ChannelLinkModel> channelLinks,
-        DiscordMember member)
+        DiscordMember member,
+        Guid traceId)
     {
-        if (afterChannel is null) return;
+        logger.LogInformation("Handling new channel After channel Id: {AfterChannelId} TraceId: {TraceId}", afterChannel?.Id, traceId);
+
+        if (afterChannel is null)
+        {
+            logger.LogInformation("After channel is null, TraceId: {TraceId}", traceId);
+            return;
+        }
 
         var channelLink = channelLinks
             .Where(x => x.VoiceChannelId == afterChannel.Id)
@@ -145,12 +165,12 @@ public class VoiceStateUpdatedHandler(
             }
             catch (NotFoundException)
             {
-                await HandleNotFoundChannel(guildId, channelLinkModel);
+                await HandleNotFoundChannel(guildId, channelLinkModel, traceId);
                 continue;
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Failed to get Channel by Id: {ChannelId}", channelLinkModel.TextChannelId);
+                logger.LogError(e, "Failed to get Channel by Id: {ChannelId} TraceId: {TraceId}", channelLinkModel.TextChannelId, traceId);
                 continue;
             }
 
@@ -160,15 +180,19 @@ public class VoiceStateUpdatedHandler(
 #pragma warning disable DSP0007
                 await tc.AddOverwriteAsync(member, new DiscordPermissions([DiscordPermission.ViewChannel, DiscordPermission.SendMessages]));
 #pragma warning restore DSP0007
-                logger.LogInformation("Added Member: {Member} to Channel: {Channel}", member, tc);
+                logger.LogInformation("Added Member: {Member} to Channel: {Channel} TraceId: {TraceId}", member, tc, traceId);
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Failed to add overwrites to Member: {Member}", member);
+                logger.LogError(e, "Failed to add overwrites to Member: {Member} TraceId: {TraceId}", member, traceId);
             }
         }
 
-        if (afterChannel.Type != DiscordChannelType.Voice) return;
+        if (afterChannel.Type != DiscordChannelType.Voice)
+        {
+            logger.LogInformation("After channel is not voice, TraceId: {TraceId}", traceId);
+            return;
+        }
 
         try
         {
@@ -177,14 +201,14 @@ public class VoiceStateUpdatedHandler(
                     $"{(string.IsNullOrEmpty(member.Nickname) ? member.GlobalName : member.Nickname)} зашёл"
                 )
             );
-            logger.LogInformation("Sent Message: {Message} to Channel: {Channel}", message, afterChannel);
+            logger.LogInformation("Sent Message: {Message} to Channel: {Channel} TraceId: {TraceId}", message, afterChannel, traceId);
 
             await message.ModifyAsync(new DiscordMessageBuilder().WithContent($"<@{args.UserId}> зашёл"));
-            logger.LogInformation("Modified Message: {Message} in Channel: {Channel}", member, afterChannel);
+            logger.LogInformation("Modified Message: {Message} in Channel: {Channel} TraceId: {TraceId}", member, afterChannel, traceId);
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to send or modify message");
+            logger.LogError(e, "Failed to send or modify message, TraceId: {TraceId}", traceId);
         }
     }
 
@@ -193,10 +217,22 @@ public class VoiceStateUpdatedHandler(
         VoiceStateUpdatedEventArgs args,
         ulong guildId,
         DiscordChannel? beforeChannel,
+        DiscordChannel? afterChannel,
         List<ChannelLinkModel> channelLinks,
-        DiscordMember member)
+        DiscordMember member,
+        Guid traceId)
     {
-        if (args.Before?.ChannelId == args.After?.ChannelId || beforeChannel is null) return;
+        if (beforeChannel is null)
+        {
+            logger.LogInformation("Before channel is null, TraceId: {TraceId}", traceId);
+            return;
+        }
+
+        if (beforeChannel.Id == afterChannel?.Id)
+        {
+            logger.LogInformation("Before channel != After channel, Before channel Id: {BeforeChannelId}, After channel Id: {AfterChannelId} TraceId: {TraceId}", beforeChannel.Id, afterChannel?.Id, traceId);
+            return;
+        }
 
         var beforeChannelLinks = channelLinks
             .Where(x => x.VoiceChannelId == beforeChannel.Id)
@@ -211,17 +247,25 @@ public class VoiceStateUpdatedHandler(
             }
             catch (NotFoundException)
             {
-                await HandleNotFoundChannel(guildId, beforeChannelLink);
+                await HandleNotFoundChannel(guildId, beforeChannelLink, traceId);
                 continue;
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Failed to get Channel by Id: {ChannelId}", beforeChannelLink.TextChannelId);
+                logger.LogError(e, "Failed to get Channel by Id: {ChannelId} TraceId {TraceId}", beforeChannelLink.TextChannelId, traceId);
                 continue;
             }
 
-            await tc.DeleteOverwriteAsync(member);
-            logger.LogInformation("Deleted overwrite for Member: {Member} for Channel: {Channel}", member, tc);
+            try
+            {
+                await tc.DeleteOverwriteAsync(member);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to delete Overwritefor Member: {Member} for Channel: {Channel} TraceId: {TraceId}", member, tc, traceId);
+                return;
+            }
+            logger.LogInformation("Deleted overwrite for Member: {Member} for Channel: {Channel} TraceId: {TraceId}", member, tc, traceId);
         }
 
         if (beforeChannel.Users.Count == 0)
@@ -235,19 +279,23 @@ public class VoiceStateUpdatedHandler(
                 }
                 catch (NotFoundException)
                 {
-                    await HandleNotFoundChannel(guildId, beforeChannelLink);
+                    await HandleNotFoundChannel(guildId, beforeChannelLink, traceId);
                     continue;
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(e, "Failed to get Channel by Id: {ChannelId}", beforeChannelLink.TextChannelId);
+                    logger.LogError(e, "Failed to get Channel by Id: {ChannelId} TraceId {TraceId}", beforeChannelLink.TextChannelId, traceId);
                     continue;
                 }
                 _ = channelPurger.PurgeChannelAsync(beforeChannel, tc);
             }
         }
 
-        if (beforeChannel.Type != DiscordChannelType.Voice) return;
+        if (beforeChannel.Type != DiscordChannelType.Voice)
+        {
+            logger.LogInformation("Before channel is not voice, TraceId: {TraceId}", traceId);
+            return;
+        }
 
         try
         {
@@ -261,17 +309,18 @@ public class VoiceStateUpdatedHandler(
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Failed to send or modify message");
+            logger.LogError(e, "Failed to send or modify message, TraceId: {TraceId}", traceId);
         }
     }
 
-    private async Task HandleNotFoundChannel(ulong guildId, ChannelLinkModel channelLink)
+    private async Task HandleNotFoundChannel(ulong guildId, ChannelLinkModel channelLink, Guid traceId)
     {
-        logger.LogInformation("Text channel not found Id: {Id}", channelLink.TextChannelId);
+        logger.LogInformation("Text channel not found Id: {Id} TraceId: {TraceId}", channelLink.TextChannelId, traceId);
         await channelsService.RemoveLinkAsync(guildId, channelLink.TextChannelId, channelLink.VoiceChannelId);
-        logger.LogInformation("Removed channel link GuildId: {GuildId} TextChannelId: {TextChannelId} VoiceChannelId: {VoiceChannelId}",
+        logger.LogInformation("Removed channel link GuildId: {GuildId} TextChannelId: {TextChannelId} VoiceChannelId: {VoiceChannelId} TraceId: {TraceId}",
             guildId,
             channelLink.TextChannelId,
-            channelLink.VoiceChannelId);
+            channelLink.VoiceChannelId,
+            traceId);
     }
 }
