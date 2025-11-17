@@ -122,8 +122,8 @@ public class VoiceStateUpdatedHandler(
         DiscordChannel? afterChannel;
         try
         {
-            beforeChannel = args.Before is null ? null : await args.Before.GetChannelAsync();
-            afterChannel = args.After is null ? null : await args.After.GetChannelAsync();
+            beforeChannel = args.Before?.ChannelId is null ? null : await discordClient.GetChannelAsync(args.Before.ChannelId.Value);
+            afterChannel = args.After?.ChannelId is null ? null : await discordClient.GetChannelAsync(args.After.ChannelId.Value);
         }
         catch (Exception e)
         {
