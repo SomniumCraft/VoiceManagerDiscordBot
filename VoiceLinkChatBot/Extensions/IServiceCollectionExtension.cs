@@ -26,7 +26,6 @@ public static class IServiceCollectionExtension
             b.AddEventHandlers<MessageCreatedHandler>(ServiceLifetime.Scoped);
             b.AddEventHandlers<ThreadUpdatedHandler>(ServiceLifetime.Scoped);
             b.AddEventHandlers<GuildMemberAddedHandler>(ServiceLifetime.Scoped);
-            b.AddEventHandlers<GuildAuditLogCreatedHandler>(ServiceLifetime.Scoped);
         });
         return serviceCollection;
     }
